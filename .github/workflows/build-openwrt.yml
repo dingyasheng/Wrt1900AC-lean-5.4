@@ -115,26 +115,45 @@ jobs:
     - name: Check space usage
       if: (!cancelled())
       run: df -hT
-
-    - name: Upload bin directory
-      uses: actions/upload-artifact@main
-      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
-      with:
-        name: OpenWrt_bin${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
-        path: openwrt/bin
-
-    - name: Organize files
-      id: organize
-      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+        
+    - name:  Pack targets_dir
+      if: steps.compile.outputs.status == 'success'
       run: |
-        cd openwrt/bin/targets/*/*
-        rm -rf packages
-        echo "::set-env name=FIRMWARE::$PWD"
-        echo "::set-output name=status::success"
+        cd openwrt/bin/targets/
+        tar -cvf  ${{matrix.target}}_targets.tar ./
+        gzip ${{matrix.target}}_targets.tar
+        mv *.tar.gz ..
+        
+    - name: Assemble Firmware
+      run: |
+          rm -rf ./Firmware/
+          mkdir -p ./Firmware/
+ #         find openwrt/bin/targets/ -name "*bin*" | xargs -i cp {} ./Firmware/
+          find openwrt/bin/targets/ -name "*squashfs-factory.img*" | xargs -i cp -f {} ./Firmware/
 
-    - name: Upload firmware directory
-      uses: actions/upload-artifact@main
-      if: steps.organize.outputs.status == 'success' && !cancelled()
+
+    - name: Upload Targets to release
+      if: env.UPLOAD_TARGETS_DIR == 'true' && env.UPLOAD_TO_REALEASE == 'true' && !cancelled() &&  steps.compile.outputs.status == 'success'
+      uses: svenstaro/upload-release-action@v1-release
       with:
-        name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
-        path: ${{ env.FIRMWARE }}
+        file: openwrt/bin/${{matrix.target}}_targets.tar.gz
+        asset_name: ${{matrix.target}}_targets.tar.gz
+        tag: ${{ env.DATE }}
+        overwrite: true
+        file_glob: true
+
+        
+    - name: Upload targets directory
+      if: env.UPLOAD_TARGETS_DIR == 'true' && env.UPLOAD_TO_ARTIFACTS == 'true' && !cancelled() && steps.compile.outputs.status == 'success'
+      uses: actions/upload-artifact@main
+      with:
+        name: OpenWrt_targets_${{matrix.target}}
+        path: openwrt/bin/targets
+        
+    - name: Upload Firmware
+      if: env.UPLOAD_FIRMWARE == 'true' && env.UPLOAD_TO_ARTIFACTS == 'true' && !cancelled() && steps.compile.outputs.status == 'success'
+      uses: actions/upload-artifact@main
+      with:
+        name: OpenWrt_firmware_${{matrix.target}}
+        path: ./Firmware/
+               
