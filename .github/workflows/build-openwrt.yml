@@ -128,7 +128,6 @@ jobs:
       run: |
           rm -rf ./Firmware/
           mkdir -p ./Firmware/
- #         find openwrt/bin/targets/ -name "*bin*" | xargs -i cp {} ./Firmware/
           find openwrt/bin/targets/ -name "*squashfs-factory.img*" | xargs -i cp -f {} ./Firmware/
 
 
