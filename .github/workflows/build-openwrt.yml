@@ -123,36 +123,18 @@ jobs:
         tar -cvf  ${{matrix.target}}_targets.tar ./
         gzip ${{matrix.target}}_targets.tar
         mv *.tar.gz ..
-        
-    - name: Assemble Firmware
+      
+    - name: Assemble artifact
       run: |
-          rm -rf ./Firmware/
-          mkdir -p ./Firmware/
-          find openwrt/bin/targets/ -name "*squashfs-factory.img*" | xargs -i cp -f {} ./Firmware/
-
-
-    - name: Upload Targets to release
-      if: env.UPLOAD_TARGETS_DIR == 'true' && env.UPLOAD_TO_REALEASE == 'true' && !cancelled() &&  steps.compile.outputs.status == 'success'
-      uses: svenstaro/upload-release-action@v1-release
+          rm -rf ./artifact/
+          mkdir -p ./artifact/
+          #find openwrt/bin/targets/ -name "*sysupgrade*bin*" | xargs -i mv -f {} ./artifact/
+          find openwrt/bin/targets/ -name "*squashfs-factory*img*" | xargs -i mv -f {} ./artifact/
+          #find openwrt/bin/targets/ -name "*combined*vmdk*" | xargs -i mv -f {} ./artifact/
+      
+    - name: Upload artifact
+      uses: actions/upload-artifact@master
       with:
-        file: openwrt/bin/${{matrix.target}}_targets.tar.gz
-        asset_name: ${{matrix.target}}_targets.tar.gz
-        tag: ${{ env.DATE }}
-        overwrite: true
-        file_glob: true
-
-        
-    - name: Upload targets directory
-      if: env.UPLOAD_TARGETS_DIR == 'true' && env.UPLOAD_TO_ARTIFACTS == 'true' && !cancelled() && steps.compile.outputs.status == 'success'
-      uses: actions/upload-artifact@main
-      with:
-        name: OpenWrt_targets_${{matrix.target}}
-        path: openwrt/bin/targets
-        
-    - name: Upload Firmware
-      if: env.UPLOAD_FIRMWARE == 'true' && env.UPLOAD_TO_ARTIFACTS == 'true' && !cancelled() && steps.compile.outputs.status == 'success'
-      uses: actions/upload-artifact@main
-      with:
-        name: OpenWrt_firmware_${{matrix.target}}
-        path: ./Firmware/
+        name: lean_4.9_wrt1900
+        path: ./artifact/
                
